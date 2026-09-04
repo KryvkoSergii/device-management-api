@@ -1,0 +1,170 @@
+@baseUrl = {{host}}/api/v1
+
+### Create device
+# @name createDevice
+POST {{baseUrl}}/devices
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Router",
+  "brand": "Cisco",
+  "state": "available"
+}
+
+> {%
+    client.test("Device was created", function () {
+        client.assert(response.status === 201, "Expected HTTP 201");
+        client.assert(response.body.id, "Response must contain device id");
+    });
+    client.global.set("deviceId", response.body.id);
+%}
+
+### Get created device by ID
+GET {{baseUrl}}/devices/{{deviceId}}
+Accept: application/json
+
+> {%
+    client.test("Device retrieve has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### List devices
+GET {{baseUrl}}/devices?page=0&size=20
+Accept: application/json
+
+> {%
+    client.test("Device retrieval has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### List devices filtered by brand and state
+GET {{baseUrl}}/devices?brand=Cisco&state=available&page=0&size=20
+Accept: application/json
+
+> {%
+    client.test("Device retrieval has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### List devices filtered by state
+GET {{baseUrl}}/devices?state=in-use&page=0&size=20
+Accept: application/json
+
+> {%
+    client.test("Device retrieval has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### Fully replace mutable fields (PUT)
+PUT {{baseUrl}}/devices/{{deviceId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Core Router",
+  "brand": "Juniper",
+  "state": "inactive"
+}
+
+> {%
+    client.test("Device update has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### Partially update only brand (PATCH)
+PATCH {{baseUrl}}/devices/{{deviceId}}
+Content-Type: application/merge-patch+json
+Accept: application/json
+
+{
+  "brand": "Cisco"
+}
+
+> {%
+    client.test("Device update has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### Partially update brand long value (PATCH)
+< {%
+    request.variables.set("longBrand", "A".repeat(101));
+%}
+
+PATCH {{baseUrl}}/devices/{{deviceId}}
+Content-Type: application/merge-patch+json
+Accept: application/json
+
+{
+  "brand": "{{longBrand}}"
+}
+
+> {%
+    client.test("Device update has status 400", function () {
+        client.assert(response.status === 400, "Expected HTTP 400");
+    });
+%}
+
+### Partially update only state (PATCH)
+PATCH {{baseUrl}}/devices/{{deviceId}}
+Content-Type: application/merge-patch+json
+Accept: application/json
+
+{
+  "state": "in-use"
+}
+
+> {%
+    client.test("Device update has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### Delete device
+DELETE {{baseUrl}}/devices/{{deviceId}}
+
+> {%
+    client.test("Device removal has status 409", function () {
+        client.assert(response.status === 409, "Expected HTTP 409");
+    });
+%}
+
+### Partially update only state (PATCH)
+PATCH {{baseUrl}}/devices/{{deviceId}}
+Content-Type: application/merge-patch+json
+Accept: application/json
+
+{
+  "state": "available"
+}
+
+> {%
+    client.test("Device update has status 200", function () {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+%}
+
+### Delete device
+DELETE {{baseUrl}}/devices/{{deviceId}}
+
+> {%
+    client.test("Device removal has status 204", function () {
+        client.assert(response.status === 204, "Expected HTTP 204");
+    });
+%}
+
+### Verify that deleted device is not found
+GET {{baseUrl}}/devices/{{deviceId}}
+Accept: application/problem+json
+
+> {%
+    client.test("Device update has status 404", function () {
+        client.assert(response.status === 404, "Expected HTTP 404");
+    });
+%}

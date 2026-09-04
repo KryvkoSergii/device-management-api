@@ -1,0 +1,284 @@
+openapi: 3.0.3
+info:
+  title: Device Management API
+  description: API for persisting and managing device resources.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Devices
+    description: Device lifecycle operations
+paths:
+  /api/v1/devices:
+    post:
+      tags: [Devices]
+      operationId: createDevice
+      summary: Create a device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+      responses:
+        '201':
+          description: Device created
+          headers:
+            Location:
+              description: URL of the created device
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Devices]
+      operationId: listDevices
+      summary: List and filter devices
+      parameters:
+        - name: brand
+          in: query
+          description: Case-insensitive exact brand match
+          schema:
+            type: string
+            maxLength: 100
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviceStateEnum'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Page of devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/devices/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags: [Devices]
+      operationId: getDevice
+      summary: Get a device by ID
+      responses:
+        '200':
+          description: Device found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Devices]
+      operationId: replaceDevice
+      summary: Fully replace mutable device properties
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+      responses:
+        '200':
+          description: Device replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    patch:
+      tags: [Devices]
+      operationId: updateDevice
+      summary: Partially update mutable device properties
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatchRequest'
+      responses:
+        '200':
+          description: Device updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Devices]
+      operationId: deleteDevice
+      summary: Delete a device
+      responses:
+        '204':
+          description: Device deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  parameters:
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      description: Globally unique device identifier
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Malformed or invalid request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Device not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Device state or concurrent update conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    DeviceStateEnum:
+      type: string
+      enum: [available, in-use, inactive]
+
+    DeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [name, brand, state]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '.*\S.*'
+        brand:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '.*\S.*'
+        state:
+          $ref: '#/components/schemas/DeviceStateEnum'
+
+    DevicePatchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 200
+          pattern: '.*\S.*'
+        brand:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 100
+          pattern: '.*\S.*'
+        state:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DeviceStateEnum'
+
+    DeviceResponse:
+      type: object
+      required: [id, name, brand, state, creationTime, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        brand:
+          type: string
+        state:
+          $ref: '#/components/schemas/DeviceStateEnum'
+        creationTime:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+
+    DevicePage:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceResponse'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+
+    Error:
+      type: object
+      properties:
+        title:
+          type: string
+        code:
+          type: string
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errors:
+          type: array
+          items:
+            type: string
