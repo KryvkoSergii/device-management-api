@@ -17,6 +17,11 @@ spring:
     change-log: classpath:/db/changelog/db.changelog-master.yaml
 server:
   shutdown: graceful
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    url: /openapi/device-management-api.yaml
+    disable-swagger-default-url: true
 management:
   endpoints:
     web:
