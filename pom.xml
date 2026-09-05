@@ -19,6 +19,8 @@
         <testcontainers.version>2.0.5</testcontainers.version>
         <openapi-generator.version>7.25.0</openapi-generator.version>
         <springdoc-openapi.version>3.1.0</springdoc-openapi.version>
+        <gatling.version>3.15.1</gatling.version>
+        <gatling-maven-plugin.version>4.21.10</gatling-maven-plugin.version>
         <jackson-databind-nullable.version>0.2.11</jackson-databind-nullable.version>
     </properties>
     <dependencies>
@@ -81,6 +83,12 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
             <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -164,4 +172,21 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>performance</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.gatling</groupId>
+                        <artifactId>gatling-maven-plugin</artifactId>
+                        <version>${gatling-maven-plugin.version}</version>
+                        <configuration>
+                            <simulationClass>com.ksa.devicemanagement.performance.DeviceApiSimulation</simulationClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

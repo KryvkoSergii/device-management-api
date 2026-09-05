@@ -5,7 +5,7 @@ import com.ksa.devicemanagement.domain.DeviceState;
 import com.ksa.devicemanagement.dto.CreateDeviceCommand;
 import com.ksa.devicemanagement.dto.ReplaceDeviceCommand;
 import com.ksa.devicemanagement.dto.UpdateDeviceCommand;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 
 import java.util.UUID;
 
@@ -61,7 +61,7 @@ public interface DeviceService {
      * @param state The state of the device.
      * @param page The page number.
      * @param size The number of items per page.
-     * @return A page of devices matching the criteria.
+     * @return A slice of devices matching the criteria without calculating the total count.
      */
-    Page<Device> find(String brand, DeviceState state, int page, int size);
+    Slice<Device> find(String brand, DeviceState state, int page, int size);
 }

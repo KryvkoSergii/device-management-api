@@ -38,10 +38,12 @@ WORKDIR /app
 COPY --from=build --chown=spring:spring /app/target/device-management-api-*.jar app.jar
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null || exit 1
+  CMD curl -fsS "http://localhost:${MANAGEMENT_SERVER_PORT:-8081}/actuator/health/readiness" >/dev/null \
+      || curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null \
+      || exit 1
 
 # Document the HTTP port exposed by the Spring Boot application.
-EXPOSE 8080
+EXPOSE 8080 8081
 
 # Params
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"

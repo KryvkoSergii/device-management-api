@@ -11,8 +11,9 @@ import com.ksa.devicemanagement.repository.DeviceSpecifications;
 import com.ksa.devicemanagement.validator.BusinessRulesValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +57,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @Transactional
     public Device update(UUID id, ReplaceDeviceCommand command) {
         Objects.requireNonNull(id, "Device id must not be null");
         Objects.requireNonNull(command, "Update command must not be null");
@@ -108,6 +110,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @Transactional
     public void delete(UUID id) {
         Objects.requireNonNull(id, "Device id must not be null");
 
@@ -123,12 +126,16 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    public Page<Device> find(String brand, DeviceState state, int page, int size) {
+    @Transactional(readOnly = true)
+    public Slice<Device> find(String brand, DeviceState state, int page, int size) {
         log.debug("Search by brand={} state={}", brand, state);
         Specification<Device> specification =
                 Specification.where(DeviceSpecifications.hasBrand(brand))
                         .and(DeviceSpecifications.hasState(state));
 
-        return repository.findAll(specification, PageRequest.of(page, size));
+        return repository.findBy(
+                specification,
+                query -> query.slice(PageRequest.of(page, size, Sort.by("id").ascending()))
+        );
     }
 }

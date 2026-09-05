@@ -117,7 +117,7 @@ class DeviceApiIntegrationTest {
                 .andExpect(jsonPath("$.items[*].name", containsInAnyOrder("Router", "Switch")))
                 .andExpect(jsonPath("$.page", is(0)))
                 .andExpect(jsonPath("$.size", is(20)))
-                .andExpect(jsonPath("$.totalElements", is(2)));
+                .andExpect(jsonPath("$.hasNext", is(false)));
     }
 
     @Test
@@ -129,6 +129,28 @@ class DeviceApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page", is(0)))
                 .andExpect(jsonPath("$.size", is(100)));
+    }
+
+    @Test
+    @DisplayName("indicates whether another slice is available")
+    void reportsNextSlice() throws Exception {
+        createDevice("Router", "Cisco", "available");
+        createDevice("Switch", "Juniper", "inactive");
+        createDevice("Firewall", "Fortinet", "available");
+
+        mvc.perform(get(DEVICES_URL)
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.hasNext", is(true)));
+
+        mvc.perform(get(DEVICES_URL)
+                        .param("page", "1")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.hasNext", is(false)));
     }
 
     @Test
@@ -155,7 +177,7 @@ class DeviceApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andExpect(jsonPath("$.items[*].name", containsInAnyOrder("Router", "Firewall")))
-                .andExpect(jsonPath("$.totalElements", is(2)));
+                .andExpect(jsonPath("$.hasNext", is(false)));
     }
 
     @Test
@@ -170,7 +192,7 @@ class DeviceApiIntegrationTest {
                 .andExpect(jsonPath("$.items", hasSize(1)))
                 .andExpect(jsonPath("$.items[0].name", is("Switch")))
                 .andExpect(jsonPath("$.items[0].state", is("in-use")))
-                .andExpect(jsonPath("$.totalElements", is(1)));
+                .andExpect(jsonPath("$.hasNext", is(false)));
     }
 
     @Test

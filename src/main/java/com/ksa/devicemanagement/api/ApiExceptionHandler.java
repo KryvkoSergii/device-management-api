@@ -39,7 +39,8 @@ public class ApiExceptionHandler {
     ResponseEntity<Error> conflict(HttpServletRequest request, Exception exception) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(buildError("CONFLICT", "Device conflict", exception.getMessage(), request));
+                .body(buildError("CONFLICT", "Device conflict",
+                        "The device was modified by another request", request));
     }
 
     @ExceptionHandler({IllegalArgumentException.class, ConstraintViolationException.class,
@@ -78,7 +79,8 @@ public class ApiExceptionHandler {
         log.error("Internal server error", exception);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildError("INTERNAL_SERVER_ERROR", "Internal server error", exception.getMessage(), request));
+                .body(buildError("INTERNAL_SERVER_ERROR", "Internal server error",
+                        "An unexpected error occurred", request));
     }
 
     private Error buildError(String code, String title, String message, HttpServletRequest request) {

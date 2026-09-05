@@ -70,7 +70,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DevicePage'
+                $ref: '#/components/schemas/DeviceSlice'
         '400':
           $ref: '#/components/responses/BadRequest'
   /api/v1/devices/{id}:
@@ -244,9 +244,9 @@ components:
           format: int64
           minimum: 0
 
-    DevicePage:
+    DeviceSlice:
       type: object
-      required: [content, page, size, totalElements, totalPages]
+      required: [items, page, size, hasNext]
       properties:
         items:
           type: array
@@ -258,13 +258,9 @@ components:
         size:
           type: integer
           minimum: 1
-        totalElements:
-          type: integer
-          format: int64
-          minimum: 0
-        totalPages:
-          type: integer
-          minimum: 0
+        hasNext:
+          type: boolean
+          description: Indicates whether another slice is available.
 
     Error:
       type: object

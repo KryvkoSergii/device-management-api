@@ -38,16 +38,15 @@ public class DeviceController implements DevicesApi {
     }
 
     @Override
-    public ResponseEntity<DevicePage> listDevices(@Nullable String brand,
+    public ResponseEntity<DeviceSlice> listDevices(@Nullable String brand,
                                                   @Nullable DeviceStateEnum state,
                                                   Integer page, Integer size) {
         var result = service.find(brand, mapper.toDomainState(state), page, size);
-        var response = new DevicePage(
+        var response = new DeviceSlice(
+                result.getContent().stream().map(mapper::toResponse).toList(),
                 result.getNumber(),
                 result.getSize(),
-                result.getTotalElements(),
-                result.getTotalPages())
-                .items(result.getContent().stream().map(mapper::toResponse).toList());
+                result.hasNext());
         return ResponseEntity.ok(response);
     }
 
