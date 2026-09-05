@@ -217,14 +217,14 @@ To run the application against an already available PostgreSQL instance:
 Build and start the API together with PostgreSQL:
 
 ```bash
-docker compose up --build -d
+docker compose -f compose-local.yml up --build -d
 ```
 
 Check the environment:
 
 ```bash
-docker compose ps
-docker compose logs -f api
+docker compose -f compose-local.yml ps
+docker compose -f compose-local.yml logs -f api
 ```
 
 The API is available at:
@@ -236,13 +236,13 @@ http://localhost:8080/api/v1/devices
 Stop the environment while preserving PostgreSQL data:
 
 ```bash
-docker compose down
+docker compose -f compose-local.yml down
 ```
 
 Remove the environment and its PostgreSQL volume:
 
 ```bash
-docker compose down -v
+docker compose -f compose-local.yml down -v
 ```
 
 The last command permanently deletes the local database data.
@@ -347,8 +347,17 @@ to `require` unless certificate verification is deliberately handled elsewhere.
 | `DB_POOL_MIN_IDLE` | `5` | Minimum idle database connections |
 | `DB_CONNECTION_TIMEOUT_MS` | `3000` | Connection acquisition timeout |
 | `DB_VALIDATION_TIMEOUT_MS` | `1000` | Connection validation timeout |
+| `DB_KEEPALIVE_TIME_MS` | `120000` | Idle connection keepalive interval |
+| `DB_MAX_LIFETIME_MS` | `1800000` | Maximum pooled connection lifetime |
+| `DB_IDLE_TIMEOUT_MS` | `600000` | Excess idle connection timeout |
+| `DB_CONNECT_TIMEOUT_SECONDS` | `5` | PostgreSQL TCP connection timeout |
+| `DB_SOCKET_TIMEOUT_SECONDS` | `30` | PostgreSQL response timeout |
+| `DB_QUERY_TIMEOUT_MS` | `10000` | Default JPA query timeout |
+| `LIQUIBASE_ENABLED` | `true` | Run migrations during application startup |
 | `MANAGEMENT_SERVER_PORT` | `8081` | Separate Actuator port |
 | `SHUTDOWN_TIMEOUT` | `30s` | Graceful shutdown timeout |
+| `APP_VERSION` | `unknown` | Deployed image or Git revision written to JSON logs |
+| `APP_ENVIRONMENT` | `production` | Environment written to JSON logs |
 
 Swagger, the static OpenAPI document, detailed health output, and the metrics
 endpoint are disabled in this profile. The management port must additionally be
@@ -356,7 +365,78 @@ restricted by a private network, firewall, Kubernetes NetworkPolicy, or reverse
 proxy. Secrets should be mounted or injected by the deployment platform and
 must not be committed to Compose files or the repository.
 
-### 5.3 Health and observability
+Production logs are emitted as one Logstash-compatible JSON object per line to
+standard output. Every record contains `application`, `version`, and
+`environment`; request processing records also contain `requestId` and
+`traceId`. A valid `X-Request-ID` and W3C `traceparent` are propagated from the
+trusted ingress, otherwise the application generates them. `X-Request-ID` is
+also returned in the HTTP response. The deployment platform is responsible for
+shipping stdout to centralized storage and applying retention policies.
+The local profile keeps a human-readable text format but includes the same four
+correlation and deployment fields, defaulting `version` and `environment` to
+`local` when the corresponding variables are not set.
+
+### 5.3 Request correlation and trace context
+
+The API supports two correlation identifiers with different scopes:
+
+| Header | Type | Purpose |
+|---|---|---|
+| `X-Request-ID` | Custom correlation header | Identifies one HTTP request handled by this service |
+| `traceparent` | W3C Trace Context | Identifies the distributed trace and its immediate parent span |
+
+An incoming request may contain both headers:
+
+```http
+GET /api/v1/devices HTTP/1.1
+Host: localhost:8080
+X-Request-ID: gateway-request-42
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+```
+
+The `traceparent` format is:
+
+```text
+version-trace-id-parent-span-id-trace-flags
+00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+```
+
+Here `4bf92f3577b34da6a3ce929d0e0e4736` becomes the `traceId` in application
+logs. The same trace ID can correlate one operation across an ingress and
+multiple services, while each service call may have a different request ID.
+
+`RequestCorrelationFilter` accepts an `X-Request-ID` containing 1–128 letters,
+digits, `.`, `_`, `:`, or `-`. Invalid or missing request IDs are replaced with
+a generated UUID. A missing or invalid W3C trace context receives a generated
+32-character hexadecimal trace ID. This validation prevents untrusted header
+content and control characters from being copied into logs and responses.
+
+The resolved request ID is returned to the caller:
+
+```http
+X-Request-ID: gateway-request-42
+```
+
+During request processing both identifiers are available in the logging MDC,
+so a production log entry contains fields such as:
+
+```json
+{
+  "application": "device-management-api",
+  "version": "1.2.0",
+  "environment": "production",
+  "requestId": "gateway-request-42",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "message": "Internal server error"
+}
+```
+
+The current implementation provides log correlation only. It reads the W3C
+trace ID but does not create or export spans. Full distributed tracing would
+require Micrometer Tracing with an OpenTelemetry exporter and a backend such as
+Tempo, Jaeger, or a cloud tracing service.
+
+### 5.4 Health and observability
 
 | Endpoint | Purpose |
 |---|---|
@@ -374,9 +454,9 @@ management endpoints and sensitive health details.
 Useful commands:
 
 ```bash
-docker compose logs -f api
-docker compose logs -f postgres
-docker compose exec postgres pg_isready -U devices -d devices
+docker compose -f compose-local.yml logs -f api
+docker compose -f compose-local.yml logs -f postgres
+docker compose -f compose-local.yml exec postgres pg_isready -U devices -d devices
 ```
 
 ## 6. Design decisions and limitations

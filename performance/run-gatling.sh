@@ -80,7 +80,7 @@ max_attempts=60
 while ! curl -fsS "$READINESS_URL" >/dev/null 2>&1; do
   if [ "$attempt" -ge "$max_attempts" ]; then
     echo "Application did not become ready within 120 seconds" >&2
-    echo "Inspect logs with: docker compose logs api" >&2
+    echo "Inspect logs with: docker compose -f $COMPOSE_FILE logs api" >&2
     exit 1
   fi
 

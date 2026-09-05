@@ -38,7 +38,7 @@ management:
 
 logging:
   level:
-    com.ksa.devicemanagement: INFO
+    com.ksa.devicemanagement: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [traceId=%X{traceId:-}] [requestId=%X{requestId:-}] [version=${APP_VERSION:local}] [environment=${APP_ENVIRONMENT:local}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [traceId=%X{traceId:-}] [requestId=%X{requestId:-}] [version=${APP_VERSION:local}] [environment=${APP_ENVIRONMENT:local}] - %msg%n"
